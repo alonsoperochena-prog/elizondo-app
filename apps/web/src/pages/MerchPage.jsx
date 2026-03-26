@@ -8,21 +8,21 @@ import MerchProductDetail from '@/components/MerchProductDetail.jsx';
 
 const merchProducts = [
   {
-    id: 'termo-horizonte',
-    name: 'Termo Horizonte',
+    id: 'termo-Elizondo',
+    name: 'Termo Elizondo',
     price: '350.00',
     image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8',
     options: ['Rojo', 'Azul', 'Negro', 'Blanco']
   },
   {
-    id: 'camisa-horizonte',
+    id: 'camisa-Elizondo',
     name: 'Camisa Clásica',
     price: '280.00',
     image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab',
     options: ['XS', 'S', 'M', 'L', 'XL', 'XXL']
   },
   {
-    id: 'gorra-horizonte',
+    id: 'gorra-Elizondo',
     name: 'Gorra Vintage',
     price: '220.00',
     image: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b',

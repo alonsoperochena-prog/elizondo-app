@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { User, LogOut, Coffee } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 import ProfileModal from '@/components/ProfileModal.jsx';
 import { useAuth } from '@/context/AuthContext.jsx';
+import { User, LogOut, Coffee, Receipt } from 'lucide-react';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -15,30 +15,48 @@ const HomePage = () => {
   return (
     <>
       <Helmet>
-        <title>Cafetería Horizonte - Inicio</title>
+        <title>Granola - Inicio</title>
       </Helmet>
       
       <div className="min-h-screen bg-background flex flex-col relative">
         {/* Header */}
         <header className="absolute top-0 left-0 right-0 z-40 px-6 py-6 flex justify-between items-center">
-          {/* Empty div to balance the flex layout since CartButton is fixed top-left */}
-          <div className="w-24"></div> 
-          
-          <div className="text-3xl font-serif font-bold text-white drop-shadow-lg flex items-center">
-            <Coffee className="w-8 h-8 mr-3" />
-            Horizonte
-          </div>
-          
-          <div className="flex items-center space-x-2 w-24 justify-end">
-            <Button variant="ghost" size="icon" onClick={() => setIsProfileOpen(true)} className="text-white hover:bg-white/20 rounded-full backdrop-blur-sm bg-black/10">
-              <User className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={logout} className="text-white hover:bg-white/20 rounded-full backdrop-blur-sm bg-black/10" title="Cerrar Sesión">
-              <LogOut className="w-5 h-5" />
-            </Button>
-          </div>
-        </header>
+  <div className="w-24"></div> 
+  
+  <div className="text-3xl font-serif font-bold text-white drop-shadow-lg flex items-center">
+    <Coffee className="w-8 h-8 mr-3" />
+    Elizondo
+  </div>
+  
+  <div className="flex items-center space-x-2 w-24 justify-end">
+    <Button
+      onClick={() => navigate('/mis-ordenes')}
+      className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+    >
+      <Receipt className="w-4 h-4 mr-2" />
+      Mis órdenes
+    </Button>
 
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setIsProfileOpen(true)}
+      className="text-white hover:bg-white/20 rounded-full backdrop-blur-sm bg-black/10"
+    >
+      <User className="w-5 h-5" />
+    </Button>
+
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={logout}
+      className="text-white hover:bg-white/20 rounded-full backdrop-blur-sm bg-black/10"
+      title="Cerrar Sesión"
+    >
+      <LogOut className="w-5 h-5" />
+    </Button>
+  </div>
+</header>
         {/* Hero Section */}
         <section className="relative flex-1 flex items-center justify-center overflow-hidden min-h-screen">
           <div className="absolute inset-0 z-0">

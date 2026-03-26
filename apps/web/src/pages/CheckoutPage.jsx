@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart, calculateDynamicNutrition } from '@/context/CartContext.jsx';
+import { useAuth } from '@/context/AuthContext.jsx';
+import pocketbaseClient from '@/lib/pocketbaseClient.js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Clock, CalendarDays, CreditCard } from 'lucide-react';
@@ -11,10 +13,13 @@ import { toast } from 'sonner';
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cartItems, cartTotal, clearCart } = useCart();
+  const { currentUser } = useAuth();
+
   const [deliveryMethod, setDeliveryMethod] = useState('virtual');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [fullName, setFullName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   React.useEffect(() => {
     if (cartItems.length === 0) {
@@ -24,22 +29,61 @@ const CheckoutPage = () => {
 
   const totalKcal = cartItems.reduce((acc, item) => {
     const itemNutrition = calculateDynamicNutrition(item.baseNutrition, item.customPercentages);
-    return acc + (itemNutrition.calories * item.quantity);
+    return acc + itemNutrition.calories * item.quantity;
   }, 0);
 
-  const handlePayment = () => {
+  const finalTotal = Number((cartTotal * 1.16).toFixed(2));
+
+  const handlePayment = async () => {
+    if (!currentUser) {
+      toast.error('Debes iniciar sesión para completar tu orden.');
+      navigate('/login');
+      return;
+    }
+
     if (!fullName.trim()) {
       toast.error('Por favor ingresa tu nombre completo.');
       return;
     }
+
     if (deliveryMethod === 'schedule' && (!date || !time)) {
       toast.error('Por favor selecciona fecha y hora para tu pedido.');
       return;
     }
-    
-    toast.success('¡Pago procesado con éxito! Preparando tu orden.');
-    clearCart();
-    setTimeout(() => navigate('/'), 2000);
+
+    try {
+      setIsSubmitting(true);
+
+      const orderPayload = {
+        user: currentUser.id,
+        items: cartItems.map(item => ({
+          cartItemId: item.cartItemId,
+          productId: item.id,
+          name: item.name,
+          price: Number(item.price),
+          quantity: item.quantity,
+          isPersonalized: item.isPersonalized || false,
+          customPercentages: item.customPercentages || null,
+        })),
+        total: finalTotal,
+        status: 'pending',
+        orderType: deliveryMethod === 'schedule' ? 'pickup' : 'pickup',
+      };
+
+      await pocketbaseClient.collection('orders').create(orderPayload);
+
+      toast.success('¡Orden creada con éxito! Preparando tu pedido.');
+      clearCart();
+
+     setTimeout(() => {
+  navigate('/mis-ordenes');
+}, 1200);
+    } catch (error) {
+      console.error('CHECKOUT ERROR:', error);
+      toast.error('No se pudo guardar la orden. Intenta otra vez.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getNext7Days = () => {
@@ -68,10 +112,9 @@ const CheckoutPage = () => {
       <Helmet>
         <title>Checkout - Cafetería</title>
       </Helmet>
-      
+
       <div className="min-h-screen bg-background pt-24 pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
           <div className="mb-8 flex items-center">
             <Button
               variant="ghost"
@@ -81,15 +124,16 @@ const CheckoutPage = () => {
               <ArrowLeft className="w-5 h-5 mr-2" />
               Volver a la canasta
             </Button>
-            <h1 className="text-3xl md:text-4xl font-bold font-serif text-foreground">Finalizar Orden</h1>
+            <h1 className="text-3xl md:text-4xl font-bold font-serif text-foreground">
+              Finalizar Orden
+            </h1>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
             <div className="lg:col-span-2 space-y-8">
               <div className="bg-card rounded-3xl p-6 md:p-8 border border-border shadow-sm">
                 <h2 className="text-2xl font-bold font-serif mb-6">Opciones de Entrega</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <DeliveryOptionCard
                     id="virtual"
@@ -100,9 +144,13 @@ const CheckoutPage = () => {
                     onClick={setDeliveryMethod}
                   >
                     <div className="bg-secondary/50 rounded-xl p-4 mt-2 border border-border">
-                      <p className="text-sm text-muted-foreground mb-2">Tiempo estimado de espera:</p>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Tiempo estimado de espera:
+                      </p>
                       <p className="text-2xl font-bold text-foreground">~15 minutos</p>
-                      <p className="text-sm text-primary font-medium mt-2">Posición en fila: 3</p>
+                      <p className="text-sm text-primary font-medium mt-2">
+                        Posición en fila: 3
+                      </p>
                     </div>
                   </DeliveryOptionCard>
 
@@ -116,28 +164,41 @@ const CheckoutPage = () => {
                   >
                     <div className="space-y-4 mt-2">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Fecha</label>
-                        <select 
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          Fecha
+                        </label>
+                        <select
                           className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           value={date}
-                          onChange={(e) => setDate(e.target.value)}
+                          onChange={e => setDate(e.target.value)}
                         >
                           <option value="">Seleccionar fecha</option>
                           {getNext7Days().map(d => (
-                            <option key={d} value={d}>{new Date(d).toLocaleDateString('es-MX', { weekday: 'long', month: 'short', day: 'numeric' })}</option>
+                            <option key={d} value={d}>
+                              {new Date(d).toLocaleDateString('es-MX', {
+                                weekday: 'long',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </option>
                           ))}
                         </select>
                       </div>
+
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Hora</label>
-                        <select 
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          Hora
+                        </label>
+                        <select
                           className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           value={time}
-                          onChange={(e) => setTime(e.target.value)}
+                          onChange={e => setTime(e.target.value)}
                         >
                           <option value="">Seleccionar hora</option>
                           {getTimes().map(t => (
-                            <option key={t} value={t}>{t}</option>
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -150,11 +211,11 @@ const CheckoutPage = () => {
                 <h2 className="text-2xl font-bold font-serif mb-6">Información de Contacto</h2>
                 <div className="space-y-2 max-w-md">
                   <label className="text-sm font-medium">Nombre completo</label>
-                  <Input 
-                    placeholder="Ej. Maya Chen" 
+                  <Input
+                    placeholder="Ej. Maya Chen"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="bg-background text-foreground h-12 rounded-xl" 
+                    onChange={e => setFullName(e.target.value)}
+                    className="bg-background text-foreground h-12 rounded-xl"
                   />
                 </div>
               </div>
@@ -162,24 +223,32 @@ const CheckoutPage = () => {
 
             <div className="lg:col-span-1">
               <div className="bg-card rounded-3xl p-6 border border-border shadow-sm sticky top-24">
-                <h3 className="text-xl font-bold font-serif mb-6 border-b border-border pb-4">Resumen de Orden</h3>
-                
+                <h3 className="text-xl font-bold font-serif mb-6 border-b border-border pb-4">
+                  Resumen de Orden
+                </h3>
+
                 <div className="space-y-4 mb-6 max-h-60 overflow-y-auto pr-2">
                   {cartItems.map(item => (
                     <div key={item.cartItemId} className="flex justify-between text-sm">
                       <div className="flex-1 pr-4">
-                        <span className="font-medium">{item.quantity}x {item.name}</span>
+                        <span className="font-medium">
+                          {item.quantity}x {item.name}
+                        </span>
                         {item.customPercentages && (
                           <p className="text-xs text-muted-foreground mt-0.5">Personalizado</p>
                         )}
                       </div>
-                      <span className="font-medium">${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
+                      <span className="font-medium">
+                        ${(parseFloat(item.price) * item.quantity).toFixed(2)}
+                      </span>
                     </div>
                   ))}
                 </div>
 
                 <div className="bg-secondary/50 rounded-xl p-4 mb-6 flex justify-between items-center border border-border">
-                  <span className="text-sm font-medium text-muted-foreground">Total Kilocalorías</span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Total Kilocalorías
+                  </span>
                   <span className="font-bold text-primary">{totalKcal} kcal</span>
                 </div>
 
@@ -194,21 +263,21 @@ const CheckoutPage = () => {
                   </div>
                   <div className="flex justify-between text-2xl font-bold pt-4 border-t border-border mt-4">
                     <span>Total</span>
-                    <span>${(cartTotal * 1.16).toFixed(2)}</span>
+                    <span>${finalTotal.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   onClick={handlePayment}
+                  disabled={isSubmitting}
                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90 text-lg h-14 rounded-xl font-bold shadow-lg"
                 >
                   <CreditCard className="w-5 h-5 mr-2" />
-                  Pagar ${(cartTotal * 1.16).toFixed(2)}
+                  {isSubmitting ? 'Guardando orden...' : `Pagar $${finalTotal.toFixed(2)}`}
                 </Button>
               </div>
             </div>
-
           </div>
         </div>
       </div>

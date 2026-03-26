@@ -17,6 +17,7 @@ import { CartProvider } from './context/CartContext.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { Toaster } from '@/components/ui/sonner';
+import MyOrdersPage from './pages/MyOrdersPage.jsx';
 
 function App() {
     return (
@@ -30,6 +31,7 @@ function App() {
                         <Route path="/signup" element={<SignupPage />} />
                         
                         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+                
                         
                         {/* New Menu Flow */}
                         <Route path="/menu/categories" element={<ProtectedRoute><CategoryPage /></ProtectedRoute>} />
@@ -37,6 +39,7 @@ function App() {
                         <Route path="/menu/products/:subcategoryId" element={<ProtectedRoute><ProductListPage /></ProtectedRoute>} />
                         
                         <Route path="/cart" element={<ProtectedRoute><ShoppingCart /></ProtectedRoute>} />
+                        <Route path="/mis-ordenes" element={<ProtectedRoute><MyOrdersPage /></ProtectedRoute>} />
                         <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
                         <Route path="/otros-productos" element={<ProtectedRoute><OtherProductsPage /></ProtectedRoute>} />
                         <Route path="/merch" element={<ProtectedRoute><MerchPage /></ProtectedRoute>} />
